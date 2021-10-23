@@ -1,0 +1,7 @@
+.metals/
+.vscode/
+.ammonite/
+.bloop/
+.scalafmt.conf
+*.class
+*.tasty
