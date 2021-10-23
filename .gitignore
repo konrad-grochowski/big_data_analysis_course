@@ -5,3 +5,5 @@
 .scalafmt.conf
 *.class
 *.tasty
+project
+target
