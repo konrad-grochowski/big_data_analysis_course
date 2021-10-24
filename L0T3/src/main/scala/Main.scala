@@ -40,7 +40,7 @@ class WordCloudGenerator() {
 
   }
   def getMostCommonWords(takeNumber: Int): String = {
-    wordsMap.toSeq.sortBy(-_._2).take(takeNumber).map((k, v) => s"$k;$v").mkString("\n")
+    wordsMap.toSeq.sortBy(-_._2).take(takeNumber).map((k, v) => s"$v;$k").mkString("\n")
   }
   def createCsvFile(fileName: String, takeNumber: Int): Unit = {
     val csvContent: String = getMostCommonWords(takeNumber)
