@@ -1,0 +1,13 @@
+USSR_Academy_of_Medical_Sciences Caspian_Sea
+Caspian_Sea Asia
+Caspian_Sea Donbas
+Caspian_Sea USSR_Academy_of_Medical_Sciences
+British_Indian_Ocean_Territory Asia
+British_Indian_Ocean_Territory Indonesia
+Indonesia Asia
+Indonesia British_Indian_Ocean_Territory
+Indonesia Energy_in_Indonesia
+Asia British_Indian_Ocean_Territory
+Asia Caspian_Sea
+Asia Donbas
+Asia Indonesia
