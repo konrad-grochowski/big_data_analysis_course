@@ -1,6 +1,6 @@
 use async_recursion::async_recursion;
-
 use futures::join;
+use html2text;
 use itertools::Itertools;
 use rand::{seq::IteratorRandom, SeedableRng};
 use regex::Regex;
@@ -51,26 +51,26 @@ async fn initial_crawl(article_title: String, remaining_iter: usize) -> Vec<(Str
 }
 
 async fn crawl(initial_article: String, iter_number: usize) -> Result<String> {
-    let mut hashmap: HashMap<String, Vec<String>> = initial_crawl(initial_article, iter_number - 1)
+    let mut links_hash_map: HashMap<String, Vec<String>> = initial_crawl(initial_article, iter_number - 1)
         .await
         .into_iter()
         .collect();
-    let hashmap_keys: HashSet<_> = hashmap.keys().cloned().collect();
-    hashmap.iter_mut().for_each(|(key, strings)| {
+    let hashmap_keys: HashSet<_> = links_hash_map.keys().cloned().collect();
+    links_hash_map.iter_mut().for_each(|(key, strings)| {
         strings.retain(|string| hashmap_keys.contains(string) && !(&string).eq(&key));
         strings.sort_unstable();
         strings.dedup();
     });
     let filename = format!("./crawl_data.txt",);
     let mut file = File::create(&filename)?;
-    for (key, values) in hashmap {
+    for (key, values) in links_hash_map {
         for value in values {
             writeln!(file, "{} {}", key, value);
         }
     }
     Ok(filename)
 }
-fn create_hashmap_from_file_content(contents: &str) -> HashMap<&str, Vec<&str>> {
+fn create_hash_map_from_file_content(contents: &str) -> HashMap<&str, Vec<&str>> {
     contents
         .lines()
         .into_iter()
@@ -88,18 +88,18 @@ fn create_hashmap_from_file_content(contents: &str) -> HashMap<&str, Vec<&str>> 
             },
         )
 }
-fn page_rank(filename: String, iters_num: usize) -> String {
+fn page_rank(filename: String, iters_num: usize) -> Vec<String> {
     let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
 
-    let hashmap = create_hashmap_from_file_content(&contents);
-    let mut ranks: HashMap<&str, f64> = hashmap
+    let links_hash_map = create_hash_map_from_file_content(&contents);
+    let mut ranks: HashMap<&str, f64> = links_hash_map
         .to_owned()
         .into_iter()
         .map(|(k, _)| (k, 1.0))
         .collect();
 
     for _ in 0..iters_num {
-        let contribs = hashmap
+        let contribs = links_hash_map
             .iter()
             .map(|(key, value)| {
                 (
@@ -135,13 +135,17 @@ fn page_rank(filename: String, iters_num: usize) -> String {
     }
     println!("{:#?}", ranks);
     // assert_eq!(dbg!(ranks.keys().len()),hashmap.keys().len());
-    "a".into()
+    ranks
+        .into_iter()
+        .sorted_by(|left, right| (&right.1).partial_cmp(&left.1).unwrap())
+        .map(|(k, _)| k.to_string())
+        .collect()
 }
 
 fn analyze_article(filename: String, analyzed_article: String) {
     let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
 
-    let links_map = create_hashmap_from_file_content(&contents);
+    let links_map = create_hash_map_from_file_content(&contents);
 
     let inv_links_map = links_map.to_owned().into_iter().fold(
         HashMap::new(),
@@ -154,12 +158,39 @@ fn analyze_article(filename: String, analyzed_article: String) {
     );
     inv_links_map.get(analyzed_article.as_str());
 }
+
+async fn search_engine(sorted_links: Vec<String>)-> HashMap<String,Vec<String>> {
+
+    let word_regex: Regex = Regex::new(r#"\w+"#).unwrap();
+    let mut words_hash_map: HashMap<String,Vec<String>> = HashMap::new();
+    for link in sorted_links {
+        let body = get(format!("{}{}", LINK, link))
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        println!("3");
+        let mut words: Vec<_> = word_regex
+            .captures_iter(&body)
+            .map(|c| c.get(0).unwrap().as_str().to_string()).sorted_unstable()
+            .collect();
+        words.dedup();
+        for word in words {
+            words_hash_map.entry(word).or_default().push(link.to_owned())
+        }
+    }
+    words_hash_map
+}
 #[tokio::main]
 async fn main() -> Result<()> {
-    let initial_article = "Asia".to_string();
-    let crawl_iter_number = 5;
+    let initial_article = "Jesus".to_string();
+    let crawl_iter_number = 512;
     let filename = dbg!(crawl(initial_article, crawl_iter_number).await.unwrap());
     let page_rank_iter_number = 100;
-    let _x = page_rank(filename, page_rank_iter_number);
+    let sorted_links = page_rank(filename, page_rank_iter_number);
+    
+    let words_hash_map = search_engine(sorted_links).await;
+    println!("{:#?}", words_hash_map["potential"]);
     Ok(())
 }
