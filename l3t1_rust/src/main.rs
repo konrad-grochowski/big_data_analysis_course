@@ -51,10 +51,11 @@ async fn initial_crawl(article_title: String, remaining_iter: usize) -> Vec<(Str
 }
 
 async fn crawl(initial_article: String, iter_number: usize) -> Result<String> {
-    let mut links_hash_map: HashMap<String, Vec<String>> = initial_crawl(initial_article, iter_number - 1)
-        .await
-        .into_iter()
-        .collect();
+    let mut links_hash_map: HashMap<String, Vec<String>> =
+        initial_crawl(initial_article, iter_number - 1)
+            .await
+            .into_iter()
+            .collect();
     let hashmap_keys: HashSet<_> = links_hash_map.keys().cloned().collect();
     links_hash_map.iter_mut().for_each(|(key, strings)| {
         strings.retain(|string| hashmap_keys.contains(string) && !(&string).eq(&key));
@@ -159,10 +160,9 @@ fn analyze_article(filename: String, analyzed_article: String) {
     inv_links_map.get(analyzed_article.as_str());
 }
 
-async fn search_engine(sorted_links: Vec<String>)-> HashMap<String,Vec<String>> {
-
+async fn search_engine(sorted_links: Vec<String>) -> HashMap<String, Vec<String>> {
     let word_regex: Regex = Regex::new(r#"\w+"#).unwrap();
-    let mut words_hash_map: HashMap<String,Vec<String>> = HashMap::new();
+    let mut words_hash_map: HashMap<String, Vec<String>> = HashMap::new();
     for link in sorted_links {
         let body = get(format!("{}{}", LINK, link))
             .await
@@ -173,11 +173,15 @@ async fn search_engine(sorted_links: Vec<String>)-> HashMap<String,Vec<String>> 
         println!("3");
         let mut words: Vec<_> = word_regex
             .captures_iter(&body)
-            .map(|c| c.get(0).unwrap().as_str().to_string()).sorted_unstable()
+            .map(|c| c.get(0).unwrap().as_str().to_string())
+            .sorted_unstable()
             .collect();
         words.dedup();
         for word in words {
-            words_hash_map.entry(word).or_default().push(link.to_owned())
+            words_hash_map
+                .entry(word)
+                .or_default()
+                .push(link.to_owned())
         }
     }
     words_hash_map
@@ -189,8 +193,9 @@ async fn main() -> Result<()> {
     let filename = dbg!(crawl(initial_article, crawl_iter_number).await.unwrap());
     let page_rank_iter_number = 100;
     let sorted_links = page_rank(filename, page_rank_iter_number);
-    
+
     let words_hash_map = search_engine(sorted_links).await;
     println!("{:#?}", words_hash_map["potential"]);
     Ok(())
+
 }
